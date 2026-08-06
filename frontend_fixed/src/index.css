@@ -1,0 +1,100 @@
+* { box-sizing: border-box; }
+body { 
+    font-family: system-ui, sans-serif; 
+    background: #f5f5f7; 
+    margin: 0; 
+}
+.container { 
+    max-width: 800px; 
+    margin: 0 auto; 
+    padding: 20px; 
+}
+.navbar { 
+    display: flex; 
+    gap: 16px; 
+    padding: 16px 20px; 
+    background: #222; 
+}
+.navbar a { 
+    color: white; 
+    text-decoration: none; 
+}
+.navbar button { 
+    margin-left: auto; 
+}
+form { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+    margin-bottom: 20px; 
+}
+input, select, textarea, button { 
+    padding: 8px; 
+    font-size: 14px; 
+}
+textarea { 
+    width: 100%; 
+    min-height: 60px; 
+}
+ul { 
+    list-style: none; 
+    padding: 0; 
+}
+li { 
+    background: white; 
+    padding: 12px; 
+    margin-bottom: 8px; 
+    border-radius: 6px; 
+}
+.error { 
+    color: red; 
+}
+.success { 
+    color: green; }
+.form-page { 
+    max-width: 400px;
+    margin: 60px auto; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; }
+.form-page form {
+    flex-direction: column; 
+}
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  flex: 1;
+  text-align: center;
+}
+.stat-card h3 {
+  margin: 0;
+  font-size: 28px;
+}
+.stat-card p {
+  margin: 4px 0 0;
+  color: #666;
+}
+@media (max-width: 600px) {
+  .navbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+  .navbar button {
+    margin-left: 0;
+    width: 100%;
+  }
+  .container {
+    padding: 12px;
+  }
+  form {
+    flex-direction: column;
+  }
+  input, select, textarea, button {
+    width: 100%;
+  }
+  .stat-card {
+    min-width: 100%;
+  }
+}

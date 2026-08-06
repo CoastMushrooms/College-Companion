@@ -1,0 +1,5 @@
+run venv\Scripts\activate every time this is opened anew
+
+start server with uvicorn main:app --reload
+
+site: http://127.0.0.1:8000
