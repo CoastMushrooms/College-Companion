@@ -42,6 +42,7 @@ class User(Base):
     locked_until = Column(String, nullable=True)
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(String, nullable=True)
+    token_version = Column(Integer, nullable=False, default=0)
     
 class Flashcard(Base):
     __tablename__ = "flashcards"
@@ -80,3 +81,12 @@ class StudySession(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     completed_at = Column(String, nullable=False, default=lambda: str(dt.utcnow()))
+    
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String, nullable=False)
+    detail = Column(String, nullable=True)
+    created_at = Column(String, nullable=False, default=lambda: str(dt.utcnow()))

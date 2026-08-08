@@ -3,6 +3,8 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI
 
+BLOCKED_TERMS = ["explosive", "malware", "child sexual", "weapon synthesis"]
+
 load_dotenv()
 
 client = OpenAI(
@@ -98,3 +100,7 @@ def generate_study_plan(assignments: list) -> str:
         ]
     )
     return response.choices[0].message.content
+
+def contains_blocked_content(text: str) -> bool:
+    lowered = text.lower()
+    return any(term in lowered for term in BLOCKED_TERMS)

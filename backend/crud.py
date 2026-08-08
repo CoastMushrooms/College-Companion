@@ -387,3 +387,12 @@ def update_account(db: Session, user: models.User, data: schemas.AccountUpdate):
     db.commit()
     db.refresh(user)
     return user
+
+def logout_everywhere(db: Session, user: models.User):
+    user.token_version += 1
+    db.commit()
+    
+def log_action(db: Session, user_id: int | None, action: str, detail: str = ""):
+    entry = models.AuditLog(user_id=user_id, action=action, detail=detail)
+    db.add(entry)
+    db.commit()

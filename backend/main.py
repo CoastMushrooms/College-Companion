@@ -17,17 +17,25 @@ import crud as crud
 import auth as auth
 import agents
 import ai
+import os
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 MAX_FILE_SIZE = 10 * 1024 * 1024
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+if ENVIRONMENT == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +76,7 @@ def delete_course(course_id: int, db: Session = Depends(get_db), current_user: m
     course = crud.delete_course(db, course_id, current_user.id)
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
+    crud.log_action(db, current_user.id, "delete_course", f"course_id={course_id}")
     return {"message": f"Course {course_id} deleted"}
 
 @app.get("/courses/{course_id}/assignments")
@@ -105,6 +114,7 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db), current
     assignment = crud.delete_assignment(db, assignment_id, current_user.id)
     if assignment is None:
         raise HTTPException(status_code=404, detail="Assignment not found")
+    crud.log_action(db, current_user.id, "delete_assignment", f"assignment_id={assignment_id}")
     return {"message": f"Assignment {assignment_id} deleted"}
 
 @app.post("/notes")
@@ -134,6 +144,7 @@ def delete_note(note_id: int, db: Session = Depends(get_db), current_user: model
     note = crud.delete_note(db, note_id, current_user.id)
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
+    crud.log_action(db, current_user.id, "delete_note", f"note_id={note_id}")
     return {"message": f"Note {note_id} deleted"}
 
 @app.post("/notes/{note_id}/flashcards", response_model=list[schemas.FlashcardOut])
@@ -175,17 +186,21 @@ def register(request: Request, user: schemas.UserCreate, db: Session = Depends(g
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, form_data.username)
     if user is None:
+        crud.log_action(db, None, "login_failed", f"unknown email: {form_data.username}")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     if crud.is_locked(user):
+        crud.log_action(db, user.id, "login_blocked_locked")
         raise HTTPException(status_code=423, detail="Account locked due to too many failed attempts. Try again in 15 minutes.")
 
     if not auth.verify_password(form_data.password, user.hashed_password):
         crud.record_failed_login(db, user)
+        crud.log_action(db, user.id, "login_failed", "bad password")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     crud.reset_failed_logins(db, user)
-    access_token = auth.create_access_token(data={"sub": user.email})
+    crud.log_action(db, user.id, "login_success")
+    access_token = auth.create_access_token(data={"sub": user.email, "token_version": user.token_version})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/dashboard")
@@ -213,6 +228,8 @@ def quiz(request: Request, body: schemas.QuizRequest, current_user: models.User 
 @app.post("/explain", response_model=schemas.ExplainResponse)
 @limiter.limit("10/minute")
 def explain(request: Request, body: schemas.ExplainRequest, current_user: models.User = Depends(get_current_user)):
+    if ai.contains_blocked_content(body.concept):
+        raise HTTPException(status_code=400, detail="This request cannot be processed.")
     explanation = ai.explain_concept(body.concept, body.style)
     return {"explanation": explanation}
 
@@ -279,11 +296,14 @@ def delete_document(document_id: int, db: Session = Depends(get_db), current_use
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     rag.delete_document_from_vector_store(document_id, current_user.id)
+    crud.log_action(db, current_user.id, "delete_document", f"document_id={document_id}")
     return {"message": "Document deleted"}
 
 @app.post("/rag/query", response_model=schemas.RAGQueryResponse)
 @limiter.limit("10/minute")
 def rag_query(request: Request, body: schemas.RAGQueryRequest, current_user: models.User = Depends(get_current_user)):
+    if ai.contains_blocked_content(body.question):
+        raise HTTPException(status_code=400, detail="This request cannot be processed.")
     return rag.query_documents(body.question, current_user.id)
 
 @app.post("/study-sessions", response_model=schemas.StudySessionOut)
@@ -305,6 +325,8 @@ def deadline_warning(db: Session = Depends(get_db), current_user: models.User = 
 @app.post("/agent", response_model=schemas.AgentResponse)
 @limiter.limit("10/minute")
 def agent_request(request: Request, body: schemas.AgentRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if ai.contains_blocked_content(body.message):
+        raise HTTPException(status_code=400, detail="This request cannot be processed.")
     assignments = crud.get_assignments(db, current_user.id)
     assignments_context = "\n".join(
         f"- {a.title} (due {a.due_date}, status {a.status})" for a in assignments if a.status != "done"
@@ -324,8 +346,21 @@ def reset_password(token: str, new_password: str, db: Session = Depends(get_db))
     success = crud.reset_password(db, token, new_password)
     if not success:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
+    crud.log_action(db, None, "password_reset")
     return {"message": "Password reset successful"}
 
 @app.put("/account", response_model=schemas.UserOut)
 def update_account(data: schemas.AccountUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.log_action(db, current_user.id, "update_account")
     return crud.update_account(db, current_user, data)
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    if ENVIRONMENT == "development":
+        raise exc  # let FastAPI show the real traceback while you're building
+    return JSONResponse(status_code=500, content={"detail": "Something went wrong. Please try again."})
+
+@app.post("/logout-everywhere")
+def logout_everywhere(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.logout_everywhere(db, current_user)
+    return {"message": "Logged out of all sessions"}

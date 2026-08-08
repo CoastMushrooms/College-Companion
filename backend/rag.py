@@ -1,6 +1,9 @@
 import chromadb
 from chromadb.utils import embedding_functions
 from ai import client, MODEL
+import os
+
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 
