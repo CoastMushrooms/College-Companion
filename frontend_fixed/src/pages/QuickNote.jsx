@@ -4,7 +4,6 @@ import { api } from "../api";
 
 export default function QuickNote() {
   const [content, setContent] = useState("");
-  const [courses, setCourses] = useState([]);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -15,10 +14,7 @@ export default function QuickNote() {
     try {
       const allCourses = await api.getCourses();
       const fallbackCourseId = allCourses[0]?.id;
-      if (!fallbackCourseId) {
-        setError("Create a course first before saving quick notes.");
-        return;
-      }
+      if (!fallbackCourseId) { setError("Create a course first before saving quick notes."); return; }
       await api.createNote({ title: "Quick Note", content, course_id: fallbackCourseId });
       setSaved(true);
       setTimeout(() => navigate("/notes"), 800);
@@ -32,15 +28,13 @@ export default function QuickNote() {
       <h1>Quick Note</h1>
       <textarea
         autoFocus
-        placeholder="Jot something down fast..."
+        placeholder="Jot something down fast…"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        style={{ width: "100%", minHeight: "150px", fontSize: "16px" }}
+        style={{ width: "100%", minHeight: 150, fontSize: 16 }}
       />
-      <button onClick={handleSave} style={{ width: "100%", padding: "16px", fontSize: "16px" }}>
-        Save
-      </button>
-      {saved && <p className="success">Saved!</p>}
+      <button onClick={handleSave} style={{ width: "100%", padding: 14 }}>Save</button>
+      {saved && <p className="success">Saved.</p>}
       {error && <p className="error">{error}</p>}
     </div>
   );

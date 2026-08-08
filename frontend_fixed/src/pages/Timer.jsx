@@ -23,48 +23,34 @@ export default function Timer() {
         });
       }, 1000);
     }
-
     return () => clearInterval(intervalRef.current);
   }, [isRunning]);
 
   const handleSessionComplete = async () => {
-    setMessage("Session complete! Great work.");
-    try {
-      await api.logStudySession(FOCUS_MINUTES, null);
-    } catch (err) {
-      console.error("Failed to log session:", err);
-    }
+    setMessage("Session complete — great work.");
+    try { await api.logStudySession(FOCUS_MINUTES, null); } catch (err) { console.error(err); }
   };
 
-  const start = () => {
-    setMessage("");
-    setIsRunning(true);
-  };
-
+  const start = () => { setMessage(""); setIsRunning(true); };
   const pause = () => setIsRunning(false);
-
-  const reset = () => {
-    setIsRunning(false);
-    setSecondsLeft(FOCUS_MINUTES * 60);
-    setMessage("");
-  };
+  const reset = () => { setIsRunning(false); setSecondsLeft(FOCUS_MINUTES * 60); setMessage(""); };
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const display = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h1>Focus Timer</h1>
-      <div style={{ fontSize: "64px", margin: "30px 0" }}>{display}</div>
-      {message && <p className="success">{message}</p>}
-      <div>
+    <div>
+      <h1 style={{ textAlign: "center" }}>Focus Timer</h1>
+      <div className="timer-display">{display}</div>
+      {message && <p className="success" style={{ textAlign: "center" }}>{message}</p>}
+      <div className="timer-controls">
         {!isRunning ? (
           <button onClick={start}>{secondsLeft === FOCUS_MINUTES * 60 ? "Start" : "Resume"}</button>
         ) : (
           <button onClick={pause}>Pause</button>
         )}
-        <button onClick={reset}>Reset</button>
+        <button className="secondary" onClick={reset}>Reset</button>
       </div>
     </div>
   );

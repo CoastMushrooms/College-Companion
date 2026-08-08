@@ -26,27 +26,23 @@ export default function Agent() {
 
   const renderResponse = (item) => {
     if (Array.isArray(item.response)) {
-      return (
-        <ul>
-          {item.response.map((q, i) => <li key={i}>{q.question} — <em>{q.answer}</em></li>)}
-        </ul>
-      );
+      return <ul>{item.response.map((q, i) => <li key={i}>{q.question} — <em>{q.answer}</em></li>)}</ul>;
     }
-    return <p style={{ whiteSpace: "pre-wrap" }}>{item.response}</p>;
+    return <p style={{ whiteSpace: "pre-wrap", color: "var(--ink)", margin: 0 }}>{item.response}</p>;
   };
 
   return (
     <div>
       <h1>Ask Anything</h1>
-      <p style={{ color: "#888" }}>Routes automatically to the right specialist: tutor, planner, research, quiz, writing, or career.</p>
+      <p>Routes automatically to the right specialist: tutor, planner, research, quiz, writing, or career.</p>
 
-      <div style={{ marginBottom: "20px" }}>
+      <div style={{ marginBottom: 20 }}>
         {history.map((item, i) =>
           item.role === "user" ? (
-            <p key={i}><strong>You:</strong> {item.text}</p>
+            <p key={i} className="chat-bubble-user"><strong>You:</strong> {item.text}</p>
           ) : (
-            <div key={i} style={{ background: "white", padding: "12px", borderRadius: "6px", marginBottom: "10px" }}>
-              <p style={{ color: "#888", fontSize: "12px", textTransform: "uppercase", margin: 0 }}>{item.agent} agent</p>
+            <div key={i} className="chat-bubble-agent">
+              <div className="chat-agent-label">{item.agent} agent</div>
               {renderResponse(item)}
             </div>
           )
@@ -57,12 +53,12 @@ export default function Agent() {
 
       <form onSubmit={handleSubmit}>
         <input
-          placeholder="Ask about a concept, plan your week, review writing, anything..."
+          placeholder="Ask about a concept, plan your week, review writing…"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          style={{ width: "70%" }}
+          style={{ flex: 1 }}
         />
-        <button type="submit" disabled={loading}>{loading ? "Thinking..." : "Send"}</button>
+        <button type="submit" disabled={loading}>{loading ? "Thinking…" : "Send"}</button>
       </form>
     </div>
   );

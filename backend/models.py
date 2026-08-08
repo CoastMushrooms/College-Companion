@@ -34,10 +34,14 @@ class Note(Base):
     
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index = True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    failed_attempts = Column(Integer, nullable=False, default=0)
+    locked_until = Column(String, nullable=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(String, nullable=True)
     
 class Flashcard(Base):
     __tablename__ = "flashcards"

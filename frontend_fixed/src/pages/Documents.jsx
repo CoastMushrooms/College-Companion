@@ -17,9 +17,7 @@ export default function Documents() {
     api.getCourses().then(setCourses).catch((e) => setError(e.message));
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -52,15 +50,24 @@ export default function Documents() {
   };
 
   const toggleExpand = async (documentId) => {
-    if (expandedDocId === documentId) {
-      setExpandedDocId(null);
-      return;
-    }
+    if (expandedDocId === documentId) { setExpandedDocId(null); return; }
     setExpandedDocId(documentId);
     setError("");
     try {
       const cards = await api.getDocumentFlashcards(documentId);
       setFlashcards(cards);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this document and all its flashcards?")) return;
+    setError("");
+    try {
+      await api.deleteDocument(id);
+      if (expandedDocId === id) { setExpandedDocId(null); setFlashcards([]); }
+      loadData();
     } catch (err) {
       setError(err.message);
     }
@@ -75,36 +82,47 @@ export default function Documents() {
           <option value="">Select course</option>
           {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <button type="submit" disabled={uploading}>{uploading ? "Uploading..." : "Upload PDF"}</button>
+        <button type="submit" disabled={uploading}>{uploading ? "Uploading…" : "Upload PDF"}</button>
       </form>
       {error && <p className="error">{error}</p>}
-      <ul>
-        {documents.map((d) => (
-          <li key={d.id}>
-            {d.filename}
-            <button onClick={() => handleGenerateFlashcards(d.id)} disabled={generatingId === d.id}>
-              {generatingId === d.id ? "Generating..." : "Generate Flashcards"}
-            </button>
-            <button onClick={() => toggleExpand(d.id)}>
-              {expandedDocId === d.id ? "Hide Flashcards" : "View Flashcards"}
-            </button>
 
-            {expandedDocId === d.id && (
-              <div style={{ marginTop: "10px", paddingLeft: "10px", borderLeft: "2px solid #ddd" }}>
-                {flashcards.length === 0 ? (
-                  <p>No flashcards yet — click "Generate Flashcards" above.</p>
-                ) : (
-                  <ul>
-                    {flashcards.map((f) => (
-                      <li key={f.id}><strong>Q:</strong> {f.question}<br /><strong>A:</strong> {f.answer}</li>
-                    ))}
-                  </ul>
-                )}
+      {documents.length === 0 ? (
+        <div className="empty-state">No documents uploaded yet.</div>
+      ) : (
+        <ul>
+          {documents.map((d) => (
+            <li key={d.id} className="card">
+              <div className="page-header">
+                <div className="card-title">{d.filename}</div>
+                <div>
+                  <button className="secondary" onClick={() => handleGenerateFlashcards(d.id)} disabled={generatingId === d.id}>
+                    {generatingId === d.id ? "Generating…" : "Generate Flashcards"}
+                  </button>{" "}
+                  <button className="secondary" onClick={() => toggleExpand(d.id)}>
+                    {expandedDocId === d.id ? "Hide" : "View Flashcards"}
+                  </button>{" "}
+                  <button className="secondary" onClick={() => handleDelete(d.id)}>Delete</button>
+                </div>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+
+              {expandedDocId === d.id && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                  {flashcards.length === 0 ? (
+                    <p>No flashcards yet — click "Generate Flashcards" above.</p>
+                  ) : (
+                    flashcards.map((f) => (
+                      <div key={f.id} className="card">
+                        <div className="card-title">Q: {f.question}</div>
+                        <div className="card-meta">A: {f.answer}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

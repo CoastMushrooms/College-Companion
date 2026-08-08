@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { getCourseColor } from "../utils/courseColor";
+import QuizQuestionItem from "../components/QuizQuestionItem";
 
 export default function Notes() {
   const [notes, setNotes] = useState([]);
@@ -18,20 +20,15 @@ export default function Notes() {
     api.getCourses().then(setCourses).catch((e) => setError(e.message));
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     const payload = { ...form, course_id: Number(form.course_id) };
     try {
-      if (editingId) {
-        await api.updateNote(editingId, payload);
-      } else {
-        await api.createNote(payload);
-      }
+      if (editingId) await api.updateNote(editingId, payload);
+      else await api.createNote(payload);
       setForm({ title: "", content: "", course_id: "" });
       setEditingId(null);
       loadData();
@@ -46,6 +43,7 @@ export default function Notes() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm("Delete this note?")) return;
     await api.deleteNote(id);
     loadData();
   };
@@ -53,10 +51,7 @@ export default function Notes() {
   const courseName = (id) => courses.find((c) => c.id === id)?.name || "Unknown";
 
   const toggleExpand = async (noteId) => {
-    if (expandedNoteId === noteId) {
-      setExpandedNoteId(null);
-      return;
-    }
+    if (expandedNoteId === noteId) { setExpandedNoteId(null); return; }
     setExpandedNoteId(noteId);
     setSummary("");
     setFlashcards([]);
@@ -120,69 +115,71 @@ export default function Notes() {
           {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button type="submit">{editingId ? "Update" : "Add"} Note</button>
-        {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ title: "", content: "", course_id: "" }); }}>Cancel</button>}
+        {editingId && <button type="button" className="secondary" onClick={() => { setEditingId(null); setForm({ title: "", content: "", course_id: "" }); }}>Cancel</button>}
       </form>
       {error && <p className="error">{error}</p>}
-      <ul>
-        {notes.map((n) => (
-          <li key={n.id}>
-            <strong>{n.title}</strong> — {courseName(n.course_id)}
-            <p>{n.content}</p>
-            <button onClick={() => handleEdit(n)}>Edit</button>
-            <button onClick={() => handleDelete(n.id)}>Delete</button>
-            <button onClick={() => toggleExpand(n.id)}>
-              {expandedNoteId === n.id ? "Hide AI Tools" : "AI Tools"}
-            </button>
 
-            {expandedNoteId === n.id && (
-              <div style={{ marginTop: "10px", paddingLeft: "10px", borderLeft: "2px solid #ddd" }}>
-                <button onClick={() => handleSummarize(n)} disabled={aiLoading}>
-                  {aiLoading ? "Working..." : "Summarize"}
-                </button>
-                <button onClick={() => handleGenerateFlashcards(n.id)} disabled={aiLoading}>
-                  {aiLoading ? "Working..." : "Generate Flashcards"}
-                </button>
-                <button onClick={() => handleGenerateQuiz(n.id)} disabled={aiLoading}>
-                  {aiLoading ? "Working..." : "Generate Quiz"}
-                </button>
-
-                {summary && (
-                  <div>
-                    <h4>Summary</h4>
-                    <p>{summary}</p>
-                  </div>
-                )}
-
-                {flashcards.length > 0 && (
-                  <div>
-                    <h4>Flashcards</h4>
-                    <ul>
-                      {flashcards.map((f) => (
-                        <li key={f.id}><strong>Q:</strong> {f.question}<br /><strong>A:</strong> {f.answer}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {quiz.length > 0 && (
-                  <div>
-                    <h4>Quiz</h4>
-                    <ul>
-                      {quiz.map((q) => (
-                        <li key={q.id}>
-                          <strong>{q.question}</strong> ({q.type})
-                          {q.options && <div>Options: {JSON.parse(q.options).join(", ")}</div>}
-                          <div><em>Answer: {q.answer}</em></div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+      {notes.length === 0 ? (
+        <div className="empty-state">No notes yet.</div>
+      ) : (
+        <ul>
+          {notes.map((n) => (
+            <li key={n.id} className="card tabbed" style={{ borderLeftColor: getCourseColor(n.course_id) }}>
+              <div className="page-header">
+                <div>
+                  <div className="card-title">{n.title}</div>
+                  <div className="card-meta">{courseName(n.course_id)}</div>
+                </div>
+                <div>
+                  <button className="secondary" onClick={() => handleEdit(n)}>Edit</button>{" "}
+                  <button className="secondary" onClick={() => handleDelete(n.id)}>Delete</button>{" "}
+                  <button className="secondary" onClick={() => toggleExpand(n.id)}>
+                    {expandedNoteId === n.id ? "Hide AI Tools" : "AI Tools"}
+                  </button>
+                </div>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+              <p style={{ marginTop: 8, marginBottom: 0 }}>{n.content}</p>
+
+              {expandedNoteId === n.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    <button className="secondary" onClick={() => handleSummarize(n)} disabled={aiLoading}>
+                      {aiLoading ? "Working…" : "Summarize"}
+                    </button>
+                    <button className="secondary" onClick={() => handleGenerateFlashcards(n.id)} disabled={aiLoading}>
+                      {aiLoading ? "Working…" : "Generate Flashcards"}
+                    </button>
+                    <button className="secondary" onClick={() => handleGenerateQuiz(n.id)} disabled={aiLoading}>
+                      {aiLoading ? "Working…" : "Generate Quiz"}
+                    </button>
+                  </div>
+
+                  {summary && <div className="card"><strong>Summary</strong><p>{summary}</p></div>}
+
+                  {flashcards.length > 0 && (
+                    <div>
+                      <h2 style={{ fontSize: 15, marginTop: 12 }}>Flashcards</h2>
+                      {flashcards.map((f) => (
+                        <div key={f.id} className="card">
+                          <div className="card-title">Q: {f.question}</div>
+                          <div className="card-meta">A: {f.answer}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {quiz.length > 0 && (
+                    <div>
+                      <h2 style={{ fontSize: 15, marginTop: 12 }}>Quiz</h2>
+                      {quiz.map((q) => <QuizQuestionItem key={q.id} question={q} />)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

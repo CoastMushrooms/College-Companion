@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import models as models
 import schemas
 import auth as auth
 import json
 from collections import Counter
+import secrets
 
 def get_courses(db: Session, user_id: int):
     return db.query(models.Course).filter(models.Course.user_id == user_id).all()
@@ -333,3 +334,56 @@ def get_flashcards_by_document(db: Session, document_id: int, user_id: int):
         models.Flashcard.document_id == document_id,
         models.Flashcard.user_id == user_id
     ).all()
+    
+def record_failed_login(db: Session, user: models.User):
+    user.failed_attempts += 1
+    if user.failed_attempts >= 5:
+        user.locked_until = str(datetime.utcnow() + timedelta(minutes=15))
+    db.commit()
+
+def reset_failed_logins(db: Session, user: models.User):
+    user.failed_attempts = 0
+    user.locked_until = None
+    db.commit()
+
+def is_locked(user: models.User) -> bool:
+    if user.locked_until is None:
+        return False
+    return datetime.fromisoformat(user.locked_until) > datetime.utcnow()
+
+def delete_document(db: Session, document_id: int, user_id: int):
+    doc = db.query(models.Document).filter(
+        models.Document.id == document_id,
+        models.Document.user_id == user_id
+    ).first()
+    if doc is None:
+        return None
+    db.delete(doc)
+    db.commit()
+    return doc
+
+def create_reset_token(db: Session, user: models.User) -> str:
+    token = secrets.token_urlsafe(32)
+    user.reset_token = token
+    user.reset_token_expires = str(datetime.utcnow() + timedelta(hours=1))
+    db.commit()
+    return token
+
+def reset_password(db: Session, token: str, new_password: str) -> bool:
+    user = db.query(models.User).filter(models.User.reset_token == token).first()
+    if user is None or datetime.fromisoformat(user.reset_token_expires) < datetime.utcnow():
+        return False
+    user.hashed_password = auth.hash_password(new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    return True
+
+def update_account(db: Session, user: models.User, data: schemas.AccountUpdate):
+    if data.email:
+        user.email = data.email
+    if data.password:
+        user.hashed_password = auth.hash_password(data.password)
+    db.commit()
+    db.refresh(user)
+    return user

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import field_validator
 
 class CourseCreate(BaseModel):
     name: str
@@ -37,6 +38,13 @@ class NoteUpdate(BaseModel):
 class UserCreate(BaseModel):
     email: str
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 class UserOut(BaseModel):
     id: int
@@ -144,3 +152,7 @@ class AgentRequest(BaseModel):
 class AgentResponse(BaseModel):
     agent: str
     response: str | list | dict
+    
+class AccountUpdate(BaseModel):
+    email: str | None = None
+    password: str | None = None

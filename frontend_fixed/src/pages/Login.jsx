@@ -21,15 +21,17 @@ export default function Login() {
   };
 
   return (
-    <div className="form-page">
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit">Login</button>
-      </form>
-      {error && <p className="error">{error}</p>}
-      <p>No account? <Link to="/register">Register</Link></p>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <h1 style={{ textAlign: "center" }}>Study<span style={{ color: "var(--amber)" }}>Companion</span></h1>
+        <form onSubmit={handleSubmit}>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <button type="submit">Log in</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        <p>No account? <Link to="/register">Register</Link></p>
+      </div>
     </div>
   );
 }

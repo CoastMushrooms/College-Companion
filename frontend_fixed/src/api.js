@@ -90,4 +90,6 @@ export const api = {
   askAgent: (message) => request("/agent", { method: "POST", body: JSON.stringify({ message }) }),
   generateDocumentFlashcards: (documentId) => request(`/documents/${documentId}/flashcards`, { method: "POST" }),
   getDocumentFlashcards: (documentId) => request(`/documents/${documentId}/flashcards`),
+  deleteDocument: (id) => request(`/documents/${id}`, { method: "DELETE" }),
+  updateAccount: (data) => request("/account", { method: "PUT", body: JSON.stringify(data) }),
 };

@@ -9,13 +9,13 @@ import Assignments from "./pages/Assignments";
 import Notes from "./pages/Notes";
 import CalendarPage from "./pages/Calendar";
 import Explain from "./pages/Explain";
-import Study from "./pages/Study";
-import Documents from "./pages/Documents";
 import Ask from "./pages/Ask";
 import Planner from "./pages/Planner";
+import Agent from "./pages/Agent";
+import Study from "./pages/Study";
+import Documents from "./pages/Documents";
 import Timer from "./pages/Timer";
 import Analytics from "./pages/Analytics";
-import Agent from "./pages/Agent";
 import QuickNote from "./pages/QuickNote";
 
 function ProtectedRoute({ children }) {
@@ -28,9 +28,9 @@ export default function App() {
   const { token } = useAuth();
 
   return (
-    <>
+    <div className="app-shell">
       {token && <Navbar />}
-      <div className="container">
+      <div className="main-content">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -39,17 +39,17 @@ export default function App() {
           <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-          <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
-          <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+          <Route path="/explain" element={<ProtectedRoute><Explain /></ProtectedRoute>} />
           <Route path="/ask" element={<ProtectedRoute><Ask /></ProtectedRoute>} />
           <Route path="/planner" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
-          <Route path="/explain" element={<ProtectedRoute><Explain /></ProtectedRoute>} />
+          <Route path="/agent" element={<ProtectedRoute><Agent /></ProtectedRoute>} />
+          <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
+          <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
           <Route path="/timer" element={<ProtectedRoute><Timer /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/agent" element={<ProtectedRoute><Agent /></ProtectedRoute>} />
           <Route path="/quick-note" element={<ProtectedRoute><QuickNote /></ProtectedRoute>} />
         </Routes>
       </div>
-    </>
+    </div>
   );
 }

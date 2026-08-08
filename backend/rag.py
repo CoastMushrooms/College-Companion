@@ -72,3 +72,6 @@ def get_document_text(document_id: int, user_id: int) -> str:
     )
     chunks = results["documents"]
     return "\n\n".join(chunks)
+
+def delete_document_from_vector_store(document_id: int, user_id: int):
+    collection.delete(where={"$and": [{"document_id": document_id}, {"user_id": user_id}]})

@@ -13,52 +13,48 @@ export default function Analytics() {
   }, []);
 
   if (error) return <p className="error">{error}</p>;
-  if (!data) return <p>Loading...</p>;
+  if (!data) return <p>Loading…</p>;
 
   return (
     <div>
       <h1>Analytics</h1>
 
       {warning && (
-        <div style={{
-          padding: "12px",
-          borderRadius: "6px",
-          background: warning.at_risk ? "#fdecea" : "#e8f5e9",
-          color: warning.at_risk ? "#c62828" : "#2e7d32",
-          marginBottom: "20px"
-        }}>
-          {warning.message}
+        <div className="card" style={{ borderColor: warning.at_risk ? "var(--danger)" : "var(--success)" }}>
+          <p style={{ color: warning.at_risk ? "var(--danger)" : "var(--success)", margin: 0 }}>{warning.message}</p>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+      <div className="stat-row" style={{ marginTop: 16 }}>
         <div className="stat-card">
-          <h3>{data.total_study_hours}</h3>
-          <p>Total study hours</p>
+          <div className="stat-value">{data.total_study_hours}</div>
+          <div className="stat-label">Total study hours</div>
         </div>
         <div className="stat-card">
-          <h3>{data.completion_rate}%</h3>
-          <p>Assignment completion rate</p>
+          <div className="stat-value">{data.completion_rate}%</div>
+          <div className="stat-label">Completion rate</div>
         </div>
         <div className="stat-card">
-          <h3>{data.completed_assignments} / {data.total_assignments}</h3>
-          <p>Assignments done</p>
+          <div className="stat-value">{data.completed_assignments}/{data.total_assignments}</div>
+          <div className="stat-label">Assignments done</div>
         </div>
       </div>
 
       <h2>Study Hours Over Time</h2>
       {data.hours_by_day.length === 0 ? (
-        <p>No study sessions logged yet, use the Timer to start tracking.</p>
+        <div className="empty-state">No study sessions logged yet — use the Timer to start tracking.</div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data.hours_by_day}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="hours" stroke="#8884d8" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="card">
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={data.hours_by_day}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="hours" stroke="var(--amber)" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

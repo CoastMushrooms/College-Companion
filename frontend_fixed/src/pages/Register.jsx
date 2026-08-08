@@ -22,16 +22,18 @@ export default function Register() {
   };
 
   return (
-    <div className="form-page">
-      <h1>Register</h1>
-      <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit">Register</button>
-      </form>
-      {error && <p className="error">{error}</p>}
-      {success && <p className="success">Registered! Redirecting to login...</p>}
-      <p>Already have an account? <Link to="/login">Login</Link></p>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <h1 style={{ textAlign: "center" }}>Create account</h1>
+        <form onSubmit={handleSubmit}>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="password" placeholder="Password (min. 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <button type="submit">Register</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        {success && <p className="success">Registered — redirecting to login…</p>}
+        <p>Already have an account? <Link to="/login">Log in</Link></p>
+      </div>
     </div>
   );
 }

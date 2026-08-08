@@ -22,9 +22,9 @@ export default function Planner() {
   return (
     <div>
       <h1>Study Planner</h1>
-      <button onClick={handleGenerate} disabled={loading}>{loading ? "Planning..." : "Generate 7-Day Plan"}</button>
+      <button onClick={handleGenerate} disabled={loading}>{loading ? "Planning…" : "Generate 7-Day Plan"}</button>
       {error && <p className="error">{error}</p>}
-      {plan && <p style={{ whiteSpace: "pre-wrap" }}>{plan}</p>}
+      {plan && <div className="card"><p style={{ whiteSpace: "pre-wrap", color: "var(--ink)" }}>{plan}</p></div>}
     </div>
   );
 }

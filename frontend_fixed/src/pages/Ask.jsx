@@ -34,13 +34,13 @@ export default function Ask() {
           required
           style={{ width: "100%" }}
         />
-        <button type="submit" disabled={loading}>{loading ? "Searching..." : "Ask"}</button>
+        <button type="submit" disabled={loading}>{loading ? "Searching…" : "Ask"}</button>
       </form>
       {error && <p className="error">{error}</p>}
       {answer && (
-        <div>
-          <p style={{ whiteSpace: "pre-wrap" }}>{answer}</p>
-          {sources.length > 0 && <p><em>Sources: {sources.join(", ")}</em></p>}
+        <div className="card">
+          <p style={{ whiteSpace: "pre-wrap", color: "var(--ink)" }}>{answer}</p>
+          {sources.length > 0 && <div className="card-meta">Sources: {sources.join(", ")}</div>}
         </div>
       )}
     </div>

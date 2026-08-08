@@ -26,24 +26,15 @@ export default function Explain() {
     <div>
       <h1>Explain a Concept</h1>
       <form onSubmit={handleSubmit}>
-        <input
-          placeholder="e.g. Fourier Series"
-          value={concept}
-          onChange={(e) => setConcept(e.target.value)}
-          required
-        />
-        <input
-          placeholder="e.g. freshman, 5 year old, Java developer"
-          value={style}
-          onChange={(e) => setStyle(e.target.value)}
-        />
-        <button type="submit" disabled={loading}>{loading ? "Thinking..." : "Explain"}</button>
+        <input placeholder="e.g. Fourier Series" value={concept} onChange={(e) => setConcept(e.target.value)} required />
+        <input placeholder="e.g. freshman, 5 year old" value={style} onChange={(e) => setStyle(e.target.value)} />
+        <button type="submit" disabled={loading}>{loading ? "Thinking…" : "Explain"}</button>
       </form>
       {error && <p className="error">{error}</p>}
       {explanation && (
-        <div>
-          <h3>{concept}</h3>
-          <p style={{ whiteSpace: "pre-wrap" }}>{explanation}</p>
+        <div className="card">
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>{concept}</h2>
+          <p style={{ whiteSpace: "pre-wrap", color: "var(--ink)" }}>{explanation}</p>
         </div>
       )}
     </div>

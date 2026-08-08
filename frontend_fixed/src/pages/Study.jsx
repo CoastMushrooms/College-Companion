@@ -11,18 +11,11 @@ export default function Study() {
     api.getAllFlashcards().then(setCards).catch((e) => setError(e.message));
   }, []);
 
-  const next = () => {
-    setFlipped(false);
-    setIndex((i) => (i + 1) % cards.length);
-  };
-
-  const prev = () => {
-    setFlipped(false);
-    setIndex((i) => (i - 1 + cards.length) % cards.length);
-  };
+  const next = () => { setFlipped(false); setIndex((i) => (i + 1) % cards.length); };
+  const prev = () => { setFlipped(false); setIndex((i) => (i - 1 + cards.length) % cards.length); };
 
   if (error) return <p className="error">{error}</p>;
-  if (cards.length === 0) return <p>No flashcards yet. Generate some from a note first.</p>;
+  if (cards.length === 0) return <div className="empty-state">No flashcards yet. Generate some from a note or document first.</div>;
 
   const card = cards[index];
 
@@ -30,25 +23,13 @@ export default function Study() {
     <div>
       <h1>Study</h1>
       <p>{index + 1} / {cards.length}</p>
-      <div
-        onClick={() => setFlipped(!flipped)}
-        style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          padding: "40px",
-          minHeight: "120px",
-          background: "white",
-          cursor: "pointer",
-          textAlign: "center",
-          fontSize: "18px",
-        }}
-      >
+      <div className="flip-card" onClick={() => setFlipped(!flipped)}>
         {flipped ? card.answer : card.question}
       </div>
-      <p style={{ textAlign: "center", color: "#888" }}>Click card to flip</p>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <button onClick={prev}>Previous</button>
-        <button onClick={next}>Next</button>
+      <div className="flip-hint">Click card to flip</div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+        <button className="secondary" onClick={prev}>Previous</button>
+        <button className="secondary" onClick={next}>Next</button>
       </div>
     </div>
   );

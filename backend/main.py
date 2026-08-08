@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -6,6 +6,9 @@ from auth import get_db, get_current_user
 from fastapi import UploadFile, File, Form
 from datetime import date, timedelta
 from pypdf import PdfReader
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import io
 import rag
 import models as models
@@ -16,6 +19,11 @@ import agents
 import ai
 
 app = FastAPI()
+
+MAX_FILE_SIZE = 10 * 1024 * 1024
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -155,18 +163,28 @@ def get_quiz(note_id: int, db: Session = Depends(get_db), current_user: models.U
     return crud.get_quiz_by_note(db, note_id, current_user.id)
 
 @app.post("/register", response_model=schemas.UserOut)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def register(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing_user = crud.get_user_by_email(db, user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
 
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, form_data.username)
-    if user is None or not auth.verify_password(form_data.password, user.hashed_password):
+    if user is None:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
+    if crud.is_locked(user):
+        raise HTTPException(status_code=423, detail="Account locked due to too many failed attempts. Try again in 15 minutes.")
+
+    if not auth.verify_password(form_data.password, user.hashed_password):
+        crud.record_failed_login(db, user)
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    crud.reset_failed_logins(db, user)
     access_token = auth.create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -179,20 +197,23 @@ def calendar(db: Session = Depends(get_db), current_user: models.User = Depends(
     return crud.get_calendar(db, current_user.id)
 
 @app.post("/flashcards", response_model=list[schemas.Flashcard])
-def flashcards(request: schemas.FlashcardRequest, current_user: models.User = Depends(get_current_user)):
-    return ai.generate_flashcards(request.content)
+@limiter.limit("10/minute")
+def flashcards(request: Request, body: schemas.FlashcardRequest, current_user: models.User = Depends(get_current_user)):
+    return ai.generate_flashcards(body.content)
 
 @app.get("/flashcards/all", response_model=list[schemas.FlashcardOut])
 def get_all_flashcards(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.get_all_flashcards(db, current_user.id)
 
 @app.post("/quiz", response_model=list[schemas.QuizQuestion])
-def quiz(request: schemas.QuizRequest, current_user: models.User = Depends(get_current_user)):
-    return ai.generate_quiz(request.content)
+@limiter.limit("10/minute")
+def quiz(request: Request, body: schemas.QuizRequest, current_user: models.User = Depends(get_current_user)):
+    return ai.generate_quiz(body.content)
 
 @app.post("/explain", response_model=schemas.ExplainResponse)
-def explain(request: schemas.ExplainRequest, current_user: models.User = Depends(get_current_user)):
-    explanation = ai.explain_concept(request.concept, request.style)
+@limiter.limit("10/minute")
+def explain(request: Request, body: schemas.ExplainRequest, current_user: models.User = Depends(get_current_user)):
+    explanation = ai.explain_concept(body.concept, body.style)
     return {"explanation": explanation}
 
 @app.get("/planner", response_model=schemas.StudyPlanResponse)
@@ -212,7 +233,13 @@ async def upload_document(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
     contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
     reader = PdfReader(io.BytesIO(contents))
     text = ""
     for page in reader.pages:
@@ -246,9 +273,18 @@ def generate_and_save_document_flashcards(document_id: int, db: Session = Depend
 def get_document_flashcards(document_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.get_flashcards_by_document(db, document_id, current_user.id)
 
+@app.delete("/documents/{document_id}")
+def delete_document(document_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    doc = crud.delete_document(db, document_id, current_user.id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    rag.delete_document_from_vector_store(document_id, current_user.id)
+    return {"message": "Document deleted"}
+
 @app.post("/rag/query", response_model=schemas.RAGQueryResponse)
-def rag_query(request: schemas.RAGQueryRequest, current_user: models.User = Depends(get_current_user)):
-    return rag.query_documents(request.question, current_user.id)
+@limiter.limit("10/minute")
+def rag_query(request: Request, body: schemas.RAGQueryRequest, current_user: models.User = Depends(get_current_user)):
+    return rag.query_documents(body.question, current_user.id)
 
 @app.post("/study-sessions", response_model=schemas.StudySessionOut)
 def create_study_session(session: schemas.StudySessionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -267,9 +303,29 @@ def deadline_warning(db: Session = Depends(get_db), current_user: models.User = 
     return crud.get_deadline_warning(db, current_user.id)
 
 @app.post("/agent", response_model=schemas.AgentResponse)
-def agent_request(request: schemas.AgentRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def agent_request(request: Request, body: schemas.AgentRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     assignments = crud.get_assignments(db, current_user.id)
     assignments_context = "\n".join(
         f"- {a.title} (due {a.due_date}, status {a.status})" for a in assignments if a.status != "done"
     )
-    return agents.route_to_agent(request.message, current_user.id, assignments_context)
+    return agents.route_to_agent(body.message, current_user.id, assignments_context)
+
+@app.post("/forgot-password")
+def forgot_password(email: str, db: Session = Depends(get_db)):
+    user = crud.get_user_by_email(db, email)
+    if user:
+        token = crud.create_reset_token(db, user)
+        print(f"[DEV] Password reset link: http://localhost:5173/reset-password?token={token}")
+    return {"message": "If that email exists, a reset link has been sent"}
+
+@app.post("/reset-password")
+def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+    success = crud.reset_password(db, token, new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    return {"message": "Password reset successful"}
+
+@app.put("/account", response_model=schemas.UserOut)
+def update_account(data: schemas.AccountUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.update_account(db, current_user, data)
